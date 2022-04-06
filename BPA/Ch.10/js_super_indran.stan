@@ -3,7 +3,7 @@
 functions {
   // These functions are derived from Section 12.3 of
   // Stan Modeling Language User's Guide and Reference Manual
-  
+
   /**
    * Return a integer value of first capture occasion
    *
@@ -11,15 +11,15 @@ functions {
    *
    * @return Integer value of first capture occasion
    */
-  int first_capture(array[] int y_i) {
-    for (k in 1 : size(y_i)) {
-      if (y_i[k]) {
+  int first_capture(int[] y_i) {
+    for (k in 1:size(y_i)){
+      if (y_i[k]){
         return k;
       }
     }
     return 0;
   }
-  
+
   /**
    * Return a integer value of last capture occasion
    *
@@ -27,17 +27,16 @@ functions {
    *
    * @return Integer value of last capture occasion
    */
-  int last_capture(array[] int y_i) {
-    for (k_rev in 0 : (size(y_i) - 1)) {
-      int k = size(y_i) - k_rev;
-      
-      if (y_i[k]) {
+  int last_capture(int[] y_i) {
+    for (k_rev in 0:(size(y_i) - 1)) {
+      int k;
+      k = size(y_i) - k_rev;
+      if (y_i[k])
         return k;
-      }
     }
     return 0;
   }
-  
+
   /**
    * Return a matrix of uncaptured probabilities
    *
@@ -52,13 +51,13 @@ functions {
     int n_ind = rows(p);
     int n_occasions = cols(p);
     matrix[n_ind, n_occasions] chi;
-    
+
     for (i in 1 : n_ind) {
       chi[i, n_occasions] = 1.0;
       for (t in 1 : (n_occasions - 1)) {
         int t_curr = n_occasions - t;
         int t_next = t_curr + 1;
-        
+
         chi[i, t_curr] = (1 - phi[i, t_curr])
                          + phi[i, t_curr] * (1 - p[i, t_next])
                            * chi[i, t_next];
@@ -66,7 +65,7 @@ functions {
     }
     return chi;
   }
-  
+
   /**
    * Calculate log likelihood of a Jolly-Seber model
    * under the superpopulation parameterization
@@ -80,27 +79,27 @@ functions {
    * @param nu    Vector of entry probabilities
    * @param chi   Matrix of uncapture probabilities
    */
-  void js_super_lp(array[,] int y, array[] int first, array[] int last,
+  void js_super_lp(int[,] y, int[] first, int[] last,
                    matrix p, matrix phi, real psi, vector nu, matrix chi) {
     int n_ind = dims(y)[1];
     int n_occasions = dims(y)[2];
     vector[n_occasions] qnu = 1.0 - nu;
-    
+
     for (i in 1 : n_ind) {
       vector[n_occasions] qp = 1.0 - p[i]';
-      
+
       if (first[i]) {
         // Observed
         // Included
         1 ~ bernoulli(psi);
-        
+
         // Until first capture
         if (first[i] == 1) {
           1 ~ bernoulli(nu[1] * p[i, 1]);
         } else {
           // first[i] >= 2
           vector[first[i]] lp;
-          
+
           // Entered at 1st occasion
           lp[1] = bernoulli_lpmf(1 | nu[1])
                   + bernoulli_lpmf(1 | prod(qp[1 : (first[i] - 1)]))
@@ -129,7 +128,7 @@ functions {
       } else {
         // Never observed
         vector[n_occasions + 1] lp;
-        
+
         // Entered at 1st occasion, but never captured
         lp[1] = bernoulli_lpmf(1 | psi) + bernoulli_lpmf(1 | nu[1])
                 + bernoulli_lpmf(0 | p[i, 1]) + bernoulli_lpmf(1 | chi[i, 1]);
@@ -150,12 +149,12 @@ functions {
 data {
   int<lower=0> M; // Augmented sample size
   int<lower=0> n_occasions; // Number of capture occasions
-  array[M, n_occasions] int<lower=0, upper=1> y; // Augmented capture-history
+  int<lower=0, upper=1> y[M, n_occasions]; // Augmented capture-history
 }
 transformed data {
-  array[M] int<lower=0, upper=n_occasions> first;
-  array[M] int<lower=0, upper=n_occasions> last;
-  
+  int<lower=0, upper=n_occasions> first[M];
+  int<lower=0, upper=n_occasions> last[M];
+
   for (i in 1 : M) {
     first[i] = first_capture(y[i]);
   }
@@ -179,21 +178,21 @@ transformed parameters {
   simplex[n_occasions] b; // Entry probability
   vector<lower=0, upper=1>[n_occasions] nu;
   matrix<lower=0, upper=1>[M, n_occasions] chi;
-  
+
   // Constraints
   phi = rep_matrix(mean_phi, M, n_occasions - 1);
   for (t in 1 : n_occasions) {
     p[ : , t] = inv_logit(logit(mean_p) + epsilon);
   }
-  
+
   // Dirichlet prior for entry probabilities
   // beta ~ gamma(1, 1);  // => model block
   b = beta / sum(beta);
-  
+
   // Convert entry probs to conditional entry probs
   {
     real cum_b = b[1];
-    
+
     nu[1] = b[1];
     for (t in 2 : (n_occasions - 1)) {
       nu[t] = b[t] / (1.0 - cum_b);
@@ -201,7 +200,7 @@ transformed parameters {
     }
     nu[n_occasions] = 1.0;
   }
-  
+
   // Uncaptured probability
   chi = prob_uncaptured(p, phi);
 }
@@ -212,19 +211,19 @@ model {
   //  sigma ~ normal(2.5, 1.25);
   epsilon ~ normal(0, sigma);
   beta ~ gamma(1, 1);
-  
+
   // Likelihood
   js_super_lp(y, first, last, p, phi, psi, nu, chi);
 }
 generated quantities {
   real<lower=0> sigma2;
   int<lower=0> Nsuper; // Superpopulation size
-  array[n_occasions] int<lower=0> N; // Actual population size
-  array[n_occasions] int<lower=0> B; // Number of entries
-  array[M, n_occasions] int<lower=0, upper=1> z; // Deflated latent state
-  
+  int<lower=0> N[n_occasions]; // Actual population size
+  int<lower=0> B[n_occasions]; // Number of entries
+  int<lower=0, upper=1> z[M,n_occasions]; // Deflated latent state
+
   sigma2 = square(sigma);
-  
+
   // Generate w[] and z[]
   for (i in 1 : M) {
     int q = 1;
@@ -240,16 +239,16 @@ generated quantities {
       z[i,  : ] = rep_array(0, n_occasions);
     }
   }
-  
+
   // Calculate derived population parameters
   {
-    array[M, n_occasions] int recruit = rep_array(0, M, n_occasions);
-    array[M] int Nind;
-    array[M] int Nalive;
-    
+    int recruit[M, n_occasions] = rep_array(0, M, n_occasions);
+    int Nind[M];
+    int Nalive[M];
+
     for (i in 1 : M) {
       int f = first_capture(z[i,  : ]);
-      
+
       if (f > 0) {
         recruit[i, f] = 1;
       }
