@@ -37,3 +37,23 @@ js_ran <- stan("BPA/Ch.10/js_super_indran.stan",
                open_progress = FALSE)
 ## lp__ of this model may have a small effective sample size.
 print(js_ran, digits = 3)
+
+
+## Parameters monitored
+params <- c("sigma2", "psi", "p", "phi",
+            "N", "Nsuper", "b", "B")
+## Initial values
+inits <- lapply(1:nc, function(i)
+  list(phi_1 = runif(1, 0, 1),
+       p_1 = runif(1, 0, 1),
+       sigma = runif(1, 0, 1),
+       beta = c(0,rnorm(stan_data$n_occasions-1, 0, 1))))
+
+## Call Stan from R
+js_ran <- stan("BPA/Ch.10/js_super_indran_thomas.stan",
+               data = stan_data, init = inits, pars = params,
+               chains = nc, iter = ni, warmup = nb, thin = nt,
+               seed = 2, control = list(adapt_delta = 0.9),
+               open_progress = FALSE)
+## lp__ of this model may have a small effective sample size.
+print(js_ran, digits = 3)

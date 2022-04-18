@@ -1,4 +1,9 @@
-// JS model using the superpopulation parameterization
+// JS model using the superpopulation parameterization;
+
+//1. NEED TO ADD LOSS ON CAPTURE!!!
+//2. Deal with unobserved individual & group covariates
+//3. check structure to ensure POPAN; that births before first event may also not survive to first event...???
+//bias correct mean and var to estimate latent weights by using odds from logistic regression on length to develop weighted mean. use same weights to calculate weaighted variance estimate
 
 functions {
   // These functions are derived from Section 12.3 of
@@ -163,33 +168,44 @@ transformed data {
   }
 }
 parameters {
-  real<lower=0, upper=1> mean_phi; // Mean survival
-  real<lower=0, upper=1> mean_p; // Mean capture
+  real<lower=0, upper=1> phi_1; // survival first period
+  real<lower=0, upper=1> p_1; // capture first period
   real<lower=0, upper=1> psi; // Inclusion probability
-  vector<lower=0>[n_occasions] beta;
   vector[M] epsilon;
   real<lower=0, upper=5> sigma;
   // In case of using a weakly informative prior
   //  real<lower=0> sigma;
-  vector[n_occasions] eps_p_t; //temporal process errors in p
+  vector[n_occasions-1] eps_p_t; //temporal process errors in p
   real<lower=0> sigma_p_t; //temporal process error SD for p
+  vector[n_occasions-2] eps_phi_t; //temporal process errors in phi
+  real<lower=0> sigma_phi_t; //temporal process error SD for phi
+  vector[n_occasions-1] eps_b_t; //temporal process errors in births
+  real<lower=0> sigma_b_t; //temporal process error SD for births
 }
 transformed parameters {
   matrix<lower=0, upper=1>[M, n_occasions - 1] phi;
   matrix<lower=0, upper=1>[M, n_occasions] p;
+  vector[n_occasions] beta;
   simplex[n_occasions] b; // Entry probability
   vector<lower=0, upper=1>[n_occasions] nu;
   matrix<lower=0, upper=1>[M, n_occasions] chi;
 
   // Constraints
-  phi = rep_matrix(mean_phi, M, n_occasions - 1);
-  for (t in 1 : n_occasions) {
-    p[ : , t] = inv_logit(logit(mean_p) + sum(eps_p_t[1:t] * sigma_p_t) + epsilon);
+  p[ : ,1] = inv_logit(logit(p_1) + epsilon);
+  phi[ : ,1] = rep_vector(inv_logit(logit(phi_1)), M);
+  for (t in 2 : (n_occasions-1)){
+    phi[ : ,t] = inv_logit(logit(phi[ : ,t-1]) + eps_phi_t[t-2] * sigma_phi_t);
+  }
+  for (t in 2 : n_occasions) {
+    p[ : , t] = inv_logit(logit(p[ : ,1]) + eps_p_t[t-1] * sigma_p_t);
   }
 
   // Dirichlet prior for entry probabilities
-  // beta ~ gamma(1, 1);  // => model block
-  b = beta / sum(beta);
+  beta[1] = 0;
+  for (t in 2 : n_occasions) {
+    beta[t] = beta[1] + sum(eps_b_t[1:(t-1)] * sigma_b_t);
+  }
+  b = softmax(beta[1:n_occasions]);
 
   // Convert entry probs to conditional entry probs
   {
@@ -212,9 +228,13 @@ model {
   // In case of using a weakly informative prior on sigma
   //  sigma ~ normal(2.5, 1.25);
   epsilon ~ normal(0, sigma);
-  beta ~ gamma(1, 1);
+  //beta ~ gamma(1, 1);
   sigma_p_t ~ std_normal();
   eps_p_t ~ std_normal();
+  sigma_phi_t ~ std_normal();
+  eps_phi_t ~ std_normal();
+  sigma_b_t ~ std_normal();
+  eps_b_t ~ std_normal();
 
   // Likelihood
   js_super_lp(y, first, last, p, phi, psi, nu, chi);
