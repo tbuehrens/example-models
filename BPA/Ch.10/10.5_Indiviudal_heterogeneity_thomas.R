@@ -12,6 +12,19 @@ set.seed(123)
 ## http://www.vogelwarte.ch/de/projekte/publikationen/bpa/complete-code-and-data-files-of-the-book.html
 stan_data <- read_rdump("BPA/Ch.10/js_super_indran.data.R")
 
+y2<-stan_data$y
+loc<-rep(0,stan_data$M)
+for(i in 1:stan_data$M){
+  for(j in 2:stan_data$n_occasions){
+    if(sum(y2[i,1:(j-1)]) == 2 & y2[i,j] == 1){
+      y2[i,j] = 0;
+      loc[i] = 1;
+    }
+  }
+}
+stan_data$y2 = y2
+stan_data$loc = loc
+
 ## Parameters monitored
 params <- c("sigma2", "psi", "mean_p", "mean_phi",
             "N", "Nsuper", "b", "B")

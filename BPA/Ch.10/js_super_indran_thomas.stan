@@ -105,7 +105,7 @@ functions {
 
         // Until first capture
         if (first[i] == 1) {
-          1 ~ bernoulli(nu[1] * p[i, 1]);
+          1 ~ bernoulli(nu[1] * p[i, 1]); //may need to add in prob of survival BEFORE first capture or maybe use equation for births
         } else {
           // first[i] >= 2
           vector[first[i]] lp;
