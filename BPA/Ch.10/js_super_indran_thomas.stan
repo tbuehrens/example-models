@@ -1,8 +1,8 @@
 // JS model using the superpopulation parameterization;
 
 
-//1 run random walk and OG version to verify same results
-//2 modify data to include LOC and repeat step 1
+//1 run random walk and OG version to verify same results (DONE)
+//2 modify data to include LOC and repeat step 1 (UGH, not same; why???)
 //3 use Dan email to check calcs for B* instead of B (including fish born + died before available for capture within a period)
 //1. Deal with unobserved individual & group covariates
 //3. bias correct mean and var to estimate latent weights by using odds from logistic regression on length to develop weighted mean. use same weights to calculate weaighted variance estimate
@@ -64,8 +64,10 @@ functions {
       for (t in 1 : (n_occasions - 1)) {
         int t_curr = n_occasions - t;
         int t_next = t_curr + 1;
-
         chi[i, t_curr] = (1 - phi[i, t_curr]) + phi[i, t_curr] * (1 - p[i, t_next]) * chi[i, t_next];
+      }
+      for (t in 1: (n_occasions - 1)) {
+        int t_curr = n_occasions - t;
         if(loc[i] == 1){
           if(t_curr >= last[i]){
             chi[i, t_curr] = chi[i, t_curr]/chi[i, t_curr]; //set prob uncaptured to 1.0 after loss on capture
