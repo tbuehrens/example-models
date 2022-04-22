@@ -200,7 +200,7 @@ transformed parameters {
   p[ : ,1] = inv_logit(logit(p_1) + epsilon);
   phi[ : ,1] = rep_vector(inv_logit(logit(phi_1)), M);
   for (t in 2 : (n_occasions-1)){
-    phi[ : ,t] = inv_logit(logit(phi[ : ,t-1]) + eps_phi_t[t-2] * sigma_phi_t);
+    phi[ : ,t] = inv_logit(logit(phi[ : ,t-1]) + eps_phi_t[t-1] * sigma_phi_t);
   }
   for (t in 2 : n_occasions) {
     p[ : , t] = inv_logit(logit(p[ : ,1]) + eps_p_t[t-1] * sigma_p_t);
