@@ -1,9 +1,11 @@
 // JS model using the superpopulation parameterization;
 
-//1. NEED TO ADD LOSS ON CAPTURE!!!
-//2. Deal with unobserved individual & group covariates
-//3. check structure to ensure POPAN; that births before first event may also not survive to first event...???
-//bias correct mean and var to estimate latent weights by using odds from logistic regression on length to develop weighted mean. use same weights to calculate weaighted variance estimate
+
+//1 run random walk and OG version to verify same results
+//2 modify data to include LOC and repeat step 1
+//3 use Dan email to check calcs for B* instead of B (including fish born + died before available for capture within a period)
+//1. Deal with unobserved individual & group covariates
+//3. bias correct mean and var to estimate latent weights by using odds from logistic regression on length to develop weighted mean. use same weights to calculate weaighted variance estimate
 
 functions {
   // These functions are derived from Section 12.3 of
@@ -52,7 +54,7 @@ functions {
    *
    * @return Matrix of uncaptured probabilities
    */
-  matrix prob_uncaptured(matrix p, matrix phi) {
+  matrix prob_uncaptured(matrix p, matrix phi, int[] loc, int[] last) {
     int n_ind = rows(p);
     int n_occasions = cols(p);
     matrix[n_ind, n_occasions] chi;
@@ -63,9 +65,12 @@ functions {
         int t_curr = n_occasions - t;
         int t_next = t_curr + 1;
 
-        chi[i, t_curr] = (1 - phi[i, t_curr])
-                         + phi[i, t_curr] * (1 - p[i, t_next])
-                           * chi[i, t_next];
+        chi[i, t_curr] = (1 - phi[i, t_curr]) + phi[i, t_curr] * (1 - p[i, t_next]) * chi[i, t_next];
+        if(loc[i] == 1){
+          if(t_curr >= last[i]){
+            chi[i, t_curr] = chi[i, t_curr]/chi[i, t_curr]; //set prob uncaptured to 1.0 after loss on capture
+          }
+        }
       }
     }
     return chi;
@@ -154,6 +159,7 @@ functions {
 data {
   int<lower=0> M; // Augmented sample size
   int<lower=0> n_occasions; // Number of capture occasions
+  int loc[M];//if loc == 1, fish lost on capture
   int<lower=0, upper=1> y[M, n_occasions]; // Augmented capture-history
 }
 transformed data {
@@ -200,14 +206,14 @@ transformed parameters {
     p[ : , t] = inv_logit(logit(p[ : ,1]) + eps_p_t[t-1] * sigma_p_t);
   }
 
-  // Dirichlet prior for entry probabilities
+  // Additive log ratio random walk prior for entry probabilities w
   beta[1] = 0;
   for (t in 2 : n_occasions) {
     beta[t] = beta[1] + sum(eps_b_t[1:(t-1)] * sigma_b_t);
   }
   b = softmax(beta[1:n_occasions]);
 
-  // Convert entry probs to conditional entry probs
+  // Convert entry probs to conditional entry probs (conditional that you didn't enter prior to current period)
   {
     real cum_b = b[1];
 
@@ -220,7 +226,7 @@ transformed parameters {
   }
 
   // Uncaptured probability
-  chi = prob_uncaptured(p, phi);
+  chi = prob_uncaptured(p, phi, loc, last);
 }
 model {
   // Priors
@@ -280,11 +286,13 @@ generated quantities {
     for (t in 1 : n_occasions) {
       N[t] = sum(z[ : , t]);
       B[t] = sum(recruit[ : , t]);
+      //Add B* using dan email calc here...may need to loop through periods AND individuals to get this if individual heterogeneous survival probs within period
     }
     for (i in 1 : M) {
       Nind[i] = sum(z[i]);
       Nalive[i] = Nind[i] > 0;
     }
-    Nsuper = sum(Nalive);
+    Nsuper = sum(Nalive);// see if Nsuper2 = sum (B[1:n_occasions]) is same!
+    //calc new Nsuper as sum of Bstars
   }
 }
