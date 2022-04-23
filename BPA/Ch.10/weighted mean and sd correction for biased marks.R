@@ -6,7 +6,7 @@ w_mean<-function(x,w){sum((w/sum(w))*x)}
 w_sd<-function(x,w,w_mean){sqrt(sum(w*(x-w_mean)^2)/(sum(w)*((length(w)-1)/length(w))))}
 
 
-reps<-100
+reps<-1000
 pars<-as_tibble(matrix(NA,ncol=7))%>%
   dplyr::rename(s_mean = V1, s_sd = V2, w_mean = V3, w_sd = V4, w_sd2 = V5, mean = V6, sd = V7)
 for(i in 1: reps){
@@ -20,7 +20,8 @@ for(i in 1: reps){
   dat<-tibble(x,lo,p)%>%
     mutate(
       mark=rbernoulli(n,p),
-      w=(1-p)/p,
+      #w=(1-p)/p,
+      w = (1-ilogit(b*x))/ilogit(b*x)
       )
 
   #true mean
@@ -51,7 +52,7 @@ pars<-pars%>%
          )
 
 #check my weighted variance formula
-plot(w_sd~w_sd2)
+
 plot(w_sd~w_sd2,data=pars)
 abline(a=0,b=1)
 
