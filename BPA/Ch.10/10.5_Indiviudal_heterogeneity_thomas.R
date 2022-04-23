@@ -45,15 +45,18 @@ nc <- 4
 
 y2<-stan_data$y
 loc<-rep(0,stan_data$M)
-loc_2=F
+loc_2=T
 
 non_augment<-length(rowSums(stan_data$y)[rowSums(stan_data$y)>0])
 loc_indexes=sort(sample(1:non_augment, round(0.5*non_augment)))
 
 if(loc_2==T){
   for(i in 1:stan_data$M){
+    if(sum(y2[i,]) == 1 & i %in% loc_indexes){
+      loc[i] = 1;
+    }
     for(j in 2:stan_data$n_occasions){
-      if(sum(y2[i,1:(j-1)]) >= 1 & y2[i,j] == 1 & i %in% loc_indexes){
+      if(sum(y2[i,1:j]) == 2 & y2[i,j] == 1 & i %in% loc_indexes){
         y2[i,j] = 0;
         loc[i] = 1;
       }
