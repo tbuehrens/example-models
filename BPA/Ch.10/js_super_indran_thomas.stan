@@ -2,7 +2,7 @@
 
 
 //1 run random walk and OG version to verify same results (DONE)
-//2 modify data to include LOC and repeat step 1 (UGH, not same; why???)
+//2 modify data to include LOC and repeat step 1 (DONE)
 //3 use Dan email to check calcs for B* instead of B (including fish born + died before available for capture within a period)
 //1. Deal with unobserved individual & group covariates
 //3. bias correct mean and var to estimate latent weights by using odds from logistic regression on length to develop weighted mean. use same weights to calculate weaighted variance estimate
