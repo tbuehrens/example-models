@@ -84,7 +84,7 @@ inits <- lapply(1:nc, function(i)
        beta = c(0,rnorm(stan_data$n_occasions-1, 0, 1))))
 
 ## Call Stan from R
-js_ran2 <- stan("BPA/Ch.10/js_super_indran_thomas_test.stan",
+js_ran2 <- stan("BPA/Ch.10/js_super_indran_thomas.stan",
                 data = stan_data, init = inits, pars = params,
                 chains = nc, iter = ni, warmup = nb, thin = nt,
                 seed = 2, control = list(adapt_delta = 0.8),
