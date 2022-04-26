@@ -205,14 +205,14 @@ parameters {
   real<lower=0> sigma_b_t; //temporal process error SD for births
   real b1_p; //coefficient for effect of length on prob of capture
   vector[M-ss] z_eps_length; //weight residuals for unobserved fish
+  real mean_length_uncaps; //mean FL of uncaptured fish
+  real<lower=0> sd_length_uncaps; //mean FL of uncaptured fish
 }
 transformed parameters {
   vector[M] length_aug;
-  real w_mean_length_caps = w_mean_func(length,inv_logit(b1_p * length) ./ (1-inv_logit(b1_p * length)));
-  real w_sd_length_caps = w_sd_func(length, inv_logit(b1_p * length) ./ (1-inv_logit(b1_p * length)), w_mean_length_caps);
-  real w_mean_length_uncaps = w_mean_func(length,(1-inv_logit(b1_p * length)) ./ inv_logit(b1_p * length) );
-  real w_sd_length_uncaps= w_sd_func(length,(1-inv_logit(b1_p * length)) ./ inv_logit(b1_p * length), w_mean_length_uncaps);
   vector[M-ss] length_est;
+  real w_mean_length_caps;
+  real w_sd_length_caps;
   matrix<lower=0, upper=1>[M, n_occasions - 1] phi;
   matrix<lower=0, upper=1>[M, n_occasions] p;
   vector[n_occasions] beta;
@@ -220,9 +220,12 @@ transformed parameters {
   vector<lower=0, upper=1>[n_occasions] nu;
   matrix<lower=0, upper=1>[M, n_occasions] chi;
 
+  length_est = mean_length_uncaps + z_eps_length * sd_length_uncaps;
   length_aug[1:ss] = length;
-  length_est = w_mean_length_uncaps + z_eps_length * w_sd_length_uncaps;
   length_aug[(ss+1):M] = length_est;
+
+  w_mean_length_caps = w_mean_func(length_aug,inv_logit(b1_p * length_aug) ./ (1-inv_logit(b1_p * length_aug)));
+  w_sd_length_caps = w_sd_func(length_aug, inv_logit(b1_p * length_aug) ./ (1-inv_logit(b1_p * length_aug)), w_mean_length_caps);
 
   // Constraints
   p[ : ,1] = inv_logit(logit(p_1) + b1_p * length_aug + epsilon);
