@@ -224,7 +224,7 @@ transformed parameters {
 
   // Constraints
   p[ : ,1] = inv_logit(logit(p_1) + b1_p * length_aug + epsilon);
-  phi[ : ,1] = inv_logit(logit(phi_1) + length_aug);
+  phi[ : ,1] = rep_vector(inv_logit(logit(phi_1)),M);
   for (t in 2 : (n_occasions-1)){
     phi[ : ,t] = inv_logit(logit(phi[ : ,t-1]) + eps_phi_t[t-1] * sigma_phi_t);
   }
