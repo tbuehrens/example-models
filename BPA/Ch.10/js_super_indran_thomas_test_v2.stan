@@ -208,10 +208,10 @@ parameters {
 }
 transformed parameters {
   vector[M] length_aug;
-  real w_mean_length_caps = w_mean_func(length,inv_logit(b1_p * length));
-  real w_sd_length_caps = w_sd_func(length, inv_logit(b1_p * length), w_mean_length_caps);
-  real w_mean_length_uncaps = w_mean_func(length,(1-inv_logit(b1_p * length)));
-  real w_sd_length_uncaps= w_sd_func(length,(1-inv_logit(b1_p * length)), w_mean_length_uncaps);
+  real w_mean_length_caps = w_mean_func(length,inv_logit(b1_p * length) ./ (1-inv_logit(b1_p * length)));
+  real w_sd_length_caps = w_sd_func(length, inv_logit(b1_p * length) ./ (1-inv_logit(b1_p * length)), w_mean_length_caps);
+  real w_mean_length_uncaps = w_mean_func(length,(1-inv_logit(b1_p * length)) ./ inv_logit(b1_p * length) );
+  real w_sd_length_uncaps= w_sd_func(length,(1-inv_logit(b1_p * length)) ./ inv_logit(b1_p * length), w_mean_length_uncaps);
   vector[M-ss] length_est;
   matrix<lower=0, upper=1>[M, n_occasions - 1] phi;
   matrix<lower=0, upper=1>[M, n_occasions] p;
