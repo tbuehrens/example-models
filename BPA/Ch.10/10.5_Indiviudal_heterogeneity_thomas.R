@@ -73,6 +73,40 @@ stan_data$ss = non_augment
 stan_data$length = rnorm(non_augment,0,1)
 
 
+# ## Parameters monitored
+# params <- c("psi", "p", "phi",
+#             "N", "Nsuper", "b", "B","chi")
+# ## Initial values
+# inits <- lapply(1:nc, function(i)
+#   list(phi_1 = runif(1, 0, 1),
+#        p_1 = runif(1, 0, 1),
+#        sigma = runif(1, 0, 1),
+#        beta = c(0,rnorm(stan_data$n_occasions-1, 0, 1))))
+#
+# ## Call Stan from R
+# js_ran2 <- stan("BPA/Ch.10/js_super_indran_thomas.stan",
+#                 data = stan_data, init = inits, pars = params,
+#                 chains = nc, iter = ni, warmup = nb, thin = nt,
+#                 seed = 2, control = list(adapt_delta = 0.8),
+#                 open_progress = FALSE)
+# ## lp__ of this model may have a small effective sample size.
+# #print(js_ran2, digits = 3)
+#
+# res2<-extract(js_ran2)
+# quantile(res2$Nsuper,c(0.025,0.25,0.5,0.75,0.975))
+# quantile(res2$sigma2,c(0.025,0.25,0.5,0.75,0.975))
+# apply(res2$phi[,1,],2,function(x) quantile(x,c(0.025,0.25,0.5,0.75,0.975)))
+# apply(res2$p[,1,],2,function(x) quantile(x,c(0.025,0.25,0.5,0.75,0.975)))
+# apply(res2$chi,2:3,median)
+
+
+
+# spatial
+library(gtools)
+stan_data$S<-4
+p_vec<-rdirichlet(1,alpha=rep(1,stan_data$S))
+stan_data$x_mat<-t(rmultinom(stan_data$ss,1,p_vec))
+
 ## Parameters monitored
 params <- c("psi", "p", "phi",
             "N", "Nsuper", "b", "B","chi")
@@ -84,7 +118,7 @@ inits <- lapply(1:nc, function(i)
        beta = c(0,rnorm(stan_data$n_occasions-1, 0, 1))))
 
 ## Call Stan from R
-js_ran2 <- stan("BPA/Ch.10/js_super_indran_thomas.stan",
+js_ran2 <- stan("BPA/Ch.10/js_super_indran_thomas_test_v2_space.stan",
                 data = stan_data, init = inits, pars = params,
                 chains = nc, iter = ni, warmup = nb, thin = nt,
                 seed = 2, control = list(adapt_delta = 0.8),
@@ -92,10 +126,4 @@ js_ran2 <- stan("BPA/Ch.10/js_super_indran_thomas.stan",
 ## lp__ of this model may have a small effective sample size.
 #print(js_ran2, digits = 3)
 
-res2<-extract(js_ran2)
-quantile(res2$Nsuper,c(0.025,0.25,0.5,0.75,0.975))
-quantile(res2$sigma2,c(0.025,0.25,0.5,0.75,0.975))
-apply(res2$phi[,1,],2,function(x) quantile(x,c(0.025,0.25,0.5,0.75,0.975)))
-apply(res2$p[,1,],2,function(x) quantile(x,c(0.025,0.25,0.5,0.75,0.975)))
-apply(res2$chi,2:3,median)
 
