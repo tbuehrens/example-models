@@ -182,12 +182,15 @@ data {
 }
 transformed data {
   int x_vec[S];//column sums of x_mat (spatial locations of observed fish)
+  simplex[S] p_vec;//observed proportions of fish by location
   int<lower=0, upper=n_occasions> first[M];
   int<lower=0, upper=n_occasions> last[M];
   for(i in 1:S){
     x_vec[i] = sum(x_mat[1:ss,i]);
   }
-
+  for(i in 1:S){
+    p_vec[i] = x_vec[i] * sum(x_vec)^-1;
+  }
   for (i in 1 : M) {
     first[i] = first_capture(y[i]);
   }
@@ -202,7 +205,6 @@ parameters {
   real<lower=0> sigma_phi_t; //temporal process error SD for phi
   vector[S-1] eps_phi_s; //spatial process errors in phi
   real<lower=0> sigma_phi_s; //spatial process error SD for phi
-  simplex[S] p_vec;//vector of probabilities for spatial location of capture
   //capture
   real<lower=0, upper=1> p_1; // capture first period
   vector[M] eps;//individual random effect prob of capture
@@ -310,7 +312,7 @@ model {
   // Likelihoods
   js_super_lp(y, first, last, p, phi, psi, nu, chi);
   length ~ normal(mean_length,sd_length);
-  x_vec ~ multinomial(p_vec);
+  x_vec ~ multinomial(p_vec_all);
 }
 generated quantities {
   real<lower=0> sigma2;
