@@ -213,8 +213,8 @@ parameters {
 transformed parameters {
   vector[M] length_aug; //lengths of whole pop
   vector[M-ss] length_est; //lengths of uncaptured
-  real mean_length_caps; //mean length of captured
-  real sd_length_caps; //sd length of captured
+  real mean_length; //bias-corrected mean length
+  real sd_length; //bias-corrected sd length of
   matrix<lower=0, upper=1>[M, n_occasions - 1] phi; //prob survival
   matrix<lower=0, upper=1>[M, n_occasions] p; //prob capture
   vector[n_occasions] beta; //additive log ratio component for prob of entry
@@ -222,12 +222,12 @@ transformed parameters {
   vector<lower=0, upper=1>[n_occasions] nu;//conditional prob entry
   matrix<lower=0, upper=1>[M, n_occasions] chi;//prob non-recovered
 
-  length_est = mean_length_uncaps + z_eps_length * sd_length_uncaps;
+  mean_length = w_mean_func(length,(1-inv_logit(b1_p * length)) ./ inv_logit(b1_p * length));
+  sd_length = w_sd_func(length, (1-inv_logit(b1_p * length)) ./ inv_logit(b1_p * length), mean_length);
+
+  length_est = mean_length + z_eps_length * sd_length;
   length_aug[1:ss] = length;
   length_aug[(ss+1):M] = length_est;
-
-  mean_length_caps = w_mean_func(length_aug,inv_logit(b1_p * length_aug) ./ (1-inv_logit(b1_p * length_aug)));
-  sd_length_caps = w_sd_func(length_aug, inv_logit(b1_p * length_aug) ./ (1-inv_logit(b1_p * length_aug)), mean_length_caps);
 
   // Constraints
   p[ : ,1] = inv_logit(logit(p_1) + b1_p * length_aug + eps * sigma);
