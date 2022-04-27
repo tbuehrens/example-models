@@ -190,45 +190,47 @@ transformed data {
   }
 }
 parameters {
+  //survival
   real<lower=0, upper=1> phi_1; // survival first period
-  real<lower=0, upper=1> p_1; // capture first period
-  real<lower=0, upper=1> psi; // Inclusion probability
-  vector[M] epsilon;
-  real<lower=0, upper=5> sigma;
-  // In case of using a weakly informative prior
-  //  real<lower=0> sigma;
-  vector[n_occasions-1] eps_p_t; //temporal process errors in p
-  real<lower=0> sigma_p_t; //temporal process error SD for p
   vector[n_occasions-2] eps_phi_t; //temporal process errors in phi
   real<lower=0> sigma_phi_t; //temporal process error SD for phi
+  //capture
+  real<lower=0, upper=1> p_1; // capture first period
+  vector[M] eps;//individual random effect prob of capture
+  real<lower=0> sigma;//individual random effect SD prob of capture
+  vector[n_occasions-1] eps_p_t; //temporal process errors in p
+  real<lower=0> sigma_p_t; //temporal process error SD for p
+  real b1_p; //coefficient for effect of length on prob of capture
+  vector[M-ss] z_eps_length; //z-scored weight residuals for unobserved fish
+  real mean_length_uncaps; //mean FL of uncaptured fish
+  real<lower=0> sd_length_uncaps; //sd FL of uncaptured fish
+  //inclusion
+  real<lower=0, upper=1> psi; // Inclusion probability
+  //entry
   vector[n_occasions-1] eps_b_t; //temporal process errors in births
   real<lower=0> sigma_b_t; //temporal process error SD for births
-  real b1_p; //coefficient for effect of length on prob of capture
-  vector[M-ss] z_eps_length; //weight residuals for unobserved fish
-  real mean_length_uncaps; //mean FL of uncaptured fish
-  real<lower=0> sd_length_uncaps; //mean FL of uncaptured fish
 }
 transformed parameters {
-  vector[M] length_aug;
-  vector[M-ss] length_est;
-  real w_mean_length_caps;
-  real w_sd_length_caps;
-  matrix<lower=0, upper=1>[M, n_occasions - 1] phi;
-  matrix<lower=0, upper=1>[M, n_occasions] p;
-  vector[n_occasions] beta;
+  vector[M] length_aug; //lengths of whole pop
+  vector[M-ss] length_est; //lengths of uncaptured
+  real mean_length_caps; //mean length of captured
+  real sd_length_caps; //sd length of captured
+  matrix<lower=0, upper=1>[M, n_occasions - 1] phi; //prob survival
+  matrix<lower=0, upper=1>[M, n_occasions] p; //prob capture
+  vector[n_occasions] beta; //additive log ratio component for prob of entry
   simplex[n_occasions] b; // Entry probability
-  vector<lower=0, upper=1>[n_occasions] nu;
-  matrix<lower=0, upper=1>[M, n_occasions] chi;
+  vector<lower=0, upper=1>[n_occasions] nu;//conditional prob entry
+  matrix<lower=0, upper=1>[M, n_occasions] chi;//prob non-recovered
 
   length_est = mean_length_uncaps + z_eps_length * sd_length_uncaps;
   length_aug[1:ss] = length;
   length_aug[(ss+1):M] = length_est;
 
-  w_mean_length_caps = w_mean_func(length_aug,inv_logit(b1_p * length_aug) ./ (1-inv_logit(b1_p * length_aug)));
-  w_sd_length_caps = w_sd_func(length_aug, inv_logit(b1_p * length_aug) ./ (1-inv_logit(b1_p * length_aug)), w_mean_length_caps);
+  mean_length_caps = w_mean_func(length_aug,inv_logit(b1_p * length_aug) ./ (1-inv_logit(b1_p * length_aug)));
+  sd_length_caps = w_sd_func(length_aug, inv_logit(b1_p * length_aug) ./ (1-inv_logit(b1_p * length_aug)), mean_length_caps);
 
   // Constraints
-  p[ : ,1] = inv_logit(logit(p_1) + b1_p * length_aug + epsilon);
+  p[ : ,1] = inv_logit(logit(p_1) + b1_p * length_aug + eps * sigma);
   phi[ : ,1] = rep_vector(inv_logit(logit(phi_1)),M);
   for (t in 2 : (n_occasions-1)){
     phi[ : ,t] = inv_logit(logit(phi[ : ,t-1]) + eps_phi_t[t-1] * sigma_phi_t);
@@ -261,21 +263,25 @@ transformed parameters {
 }
 model {
   // Priors
-  // Uniform priors are implicitly defined.
-  // In case of using a weakly informative prior on sigma
-  //  sigma ~ normal(2.5, 1.25);
-  epsilon ~ normal(0, sigma);
-  //beta ~ gamma(1, 1);
+  //capture
+  sigma ~ std_normal();
+  eps ~ std_normal();
   sigma_p_t ~ std_normal();
   eps_p_t ~ std_normal();
+  b1_p ~std_normal();
+  mean_length_uncaps ~ std_normal();
+  sd_length_uncaps ~ std_normal();
+  z_eps_length ~ std_normal();
+  //survival
   sigma_phi_t ~ std_normal();
   eps_phi_t ~ std_normal();
+  //entry
   sigma_b_t ~ std_normal();
   eps_b_t ~ std_normal();
-  b1_p ~ normal(0,10);
+
   // Likelihoods
   js_super_lp(y, first, last, p, phi, psi, nu, chi);
-  length ~ normal(w_mean_length_caps,w_sd_length_caps);
+  length ~ normal(mean_length_caps,sd_length_caps);
 }
 generated quantities {
   real<lower=0> sigma2;
