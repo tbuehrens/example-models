@@ -202,8 +202,6 @@ parameters {
   real<lower=0> sigma_p_t; //temporal process error SD for p
   real b1_p; //coefficient for effect of length on prob of capture
   vector[M-ss] z_eps_length; //z-scored weight residuals for unobserved fish
-  real mean_length_uncaps; //mean FL of uncaptured fish
-  real<lower=0> sd_length_uncaps; //sd FL of uncaptured fish
   //inclusion
   real<lower=0, upper=1> psi; // Inclusion probability
   //entry
@@ -269,8 +267,6 @@ model {
   sigma_p_t ~ std_normal();
   eps_p_t ~ std_normal();
   b1_p ~std_normal();
-  mean_length_uncaps ~ std_normal();
-  sd_length_uncaps ~ std_normal();
   z_eps_length ~ std_normal();
   //survival
   sigma_phi_t ~ std_normal();
@@ -281,7 +277,7 @@ model {
 
   // Likelihoods
   js_super_lp(y, first, last, p, phi, psi, nu, chi);
-  length ~ normal(mean_length_caps,sd_length_caps);
+  length ~ normal(mean_length,sd_length);
 }
 generated quantities {
   real<lower=0> sigma2;
