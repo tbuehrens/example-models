@@ -128,5 +128,7 @@ js_ran2 <- stan("BPA/Ch.10/js_super_indran_thomas_test_v2_space.stan",
                 open_progress = FALSE)
 ## lp__ of this model may have a small effective sample size.
 #print(js_ran2, digits = 3)
-
+res2<-extract(js_ran2)
+quantile(res2$Nsuper,c(0.025,0.25,0.5,0.75,0.975))
+write.csv(summary(js_ran2)$summary,"BPA/Ch.10/summary.csv")
 

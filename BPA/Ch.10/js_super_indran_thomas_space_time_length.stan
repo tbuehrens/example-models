@@ -235,7 +235,7 @@ transformed parameters {
   b2_p[1] = 0;
   for(s in 2:S){
     b2_phi[s] = b2_phi[s-1] + eps_phi_s[s-1] * sigma_phi_s;
-    b2_phi[s] = b2_phi[s-1] + eps_phi_s[s-1] * sigma_phi_s;
+    b2_p[s] = b2_p[s-1] + eps_p_s[s-1] * sigma_p_s;
   }
 
   for(i in 1:M){
@@ -247,7 +247,7 @@ transformed parameters {
   }
 
   // Constraints
-  p[ : ,1]   = inv_logit(logit(p_1)   + b1_p   * length_aug + x_mat_aug[1:M,1:S] * b2_p + eps * sigma);
+  p[ : ,1]   = inv_logit(logit(p_1) + b1_p * length_aug + x_mat_aug[1:M,1:S] * b2_p + eps * sigma);
   for (t in 2 : n_occasions) {
     p[ : , t] = inv_logit(logit(p[ : ,1]) + eps_p_t[t-1] * sigma_p_t);
   }
@@ -271,7 +271,7 @@ transformed parameters {
   // Additive log ratio random walk prior for entry probabilities w
   beta[1] = 0; //no need for time offset for first period
   for (t in 2 : n_occasions) {
-    beta[t] = beta[1] + sum(eps_b_t[1:(t-1)] * sigma_b_t + log(time[t]));
+    beta[t] = beta[1] + sum(eps_b_t[1:(t-1)] * sigma_b_t + log(time[t-1]));
   }
   b = softmax(beta[1:n_occasions]);
 
@@ -297,6 +297,7 @@ model {
   mean_length ~ std_normal();
   sd_length ~ std_normal();
   //capture
+  //p_1 ~ uniform(0,1);
   sigma ~ std_normal();
   eps ~ std_normal();
   sigma_p_t ~ std_normal();
@@ -305,6 +306,7 @@ model {
   eps_p_s ~ std_normal();
   sigma_p_s ~ std_normal();
   //survival
+  //phi_1 ~ uniform(0,1);
   b1_phi ~std_normal();
   sigma_phi_t ~ std_normal();
   eps_phi_t ~ std_normal();
