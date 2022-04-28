@@ -45,29 +45,24 @@ nc <- 4
 
 y2<-stan_data$y
 loc<-rep(0,stan_data$M)
-loc_2=T
+fraction_lost_on_capture<-1
 
 non_augment<-length(rowSums(stan_data$y)[rowSums(stan_data$y)>0])
-loc_indexes=sort(sample(1:non_augment, round(0.5*non_augment)))
+loc_indexes=sort(sample(1:non_augment, round(fraction_lost_on_capture*non_augment)))
 
-if(loc_2==T){
-  for(i in 1:stan_data$M){
-    if(sum(y2[i,]) == 1 & i %in% loc_indexes){
+for(i in 1:stan_data$M){
+  if(sum(y2[i,]) == 1 & i %in% loc_indexes){
+    loc[i] = 1;
+  }
+  for(j in 2:stan_data$n_occasions){
+    if(sum(y2[i,1:j]) == 2 & y2[i,j] == 1 & i %in% loc_indexes){
+      y2[i,j] = 0;
       loc[i] = 1;
     }
-    for(j in 2:stan_data$n_occasions){
-      if(sum(y2[i,1:j]) == 2 & y2[i,j] == 1 & i %in% loc_indexes){
-        y2[i,j] = 0;
-        loc[i] = 1;
-      }
-    }
   }
-  stan_data$y = y2
-  stan_data$loc = loc
-}else{
-  stan_data$y = stan_data$y
-  stan_data$loc = rep(0,stan_data$M)
 }
+stan_data$y = y2
+stan_data$loc = loc
 
 stan_data$ss = non_augment
 stan_data$length = rnorm(non_augment,0,1)
