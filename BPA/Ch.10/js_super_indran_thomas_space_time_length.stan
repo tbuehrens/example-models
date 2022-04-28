@@ -68,7 +68,7 @@ functions {
         int t_curr = n_occasions - t;
         if(loc[i] == 1){
           if(t_curr >= last[i]){
-            chi[i, t_curr] = chi[i, t_curr]/chi[i, t_curr]; //set prob uncaptured to 1.0 after loss on capture
+            chi[i, t_curr] = 1; //set prob uncaptured to 1.0 after loss on capture
           }
         }
       }
@@ -185,7 +185,7 @@ parameters {
   //imputed covariates
   vector[M-ss] z_eps_length; //z-scored weight residuals for unobserved fish
   real mean_length; //mean length of all fish
-  real sd_length; //sd length of all fish
+  real<lower=0> sd_length; //sd length of all fish
   simplex[S] spatial_vec;//proportions of fish by location for all fish
   //survival
   real<lower=0, upper=1> phi_1; // survival first period

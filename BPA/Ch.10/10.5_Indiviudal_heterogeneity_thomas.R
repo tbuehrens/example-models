@@ -122,7 +122,7 @@ inits <- lapply(1:nc, function(i)
 
 ## Call Stan from R
 js_ran2 <- stan("BPA/Ch.10/js_super_indran_thomas_test_v2_space.stan",
-                data = stan_data, init = inits, pars = params,
+                data = stan_data, init = inits, #pars = params,
                 chains = nc, iter = ni, warmup = nb, thin = nt,
                 seed = 2, control = list(adapt_delta = 0.8),
                 open_progress = FALSE)

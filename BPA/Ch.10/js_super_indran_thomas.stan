@@ -70,7 +70,7 @@ functions {
         int t_curr = n_occasions - t;
         if(loc[i] == 1){
           if(t_curr >= last[i]){
-            chi[i, t_curr] = chi[i, t_curr]/chi[i, t_curr]; //set prob uncaptured to 1.0 after loss on capture
+            chi[i, t_curr] = 1; //set prob uncaptured to 1.0 after loss on capture
           }
         }
       }
