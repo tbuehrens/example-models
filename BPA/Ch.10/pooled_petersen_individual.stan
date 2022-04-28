@@ -35,8 +35,8 @@ model {
   // Priors
   //  omega ~ uniform(0, 1);
   mean_p ~ uniform(0, 1);
-  beta ~ normal(0, 10);
-  mu_size ~ normal(0, 10);
+  beta ~ std_normal();
+  mu_size ~ std_normal();
   sd_size ~ std_normal();
 
   // Likelihood
