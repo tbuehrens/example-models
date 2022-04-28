@@ -107,6 +107,9 @@ stan_data$S<-4
 p_vec<-rdirichlet(1,alpha=rep(1,stan_data$S))
 stan_data$x_mat<-t(rmultinom(stan_data$ss,1,p_vec))
 
+#add in variable period length
+stan_data$time = rep(1,stan_data$n_occasions-1)
+
 ## Parameters monitored
 params <- c("psi", "p", "phi",
             "N", "Nsuper", "b", "B","chi")

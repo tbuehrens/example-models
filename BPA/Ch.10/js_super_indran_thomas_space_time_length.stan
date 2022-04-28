@@ -4,7 +4,7 @@
 //1 run random walk and OG version to verify same results (DONE)
 //2 modify data to include LOC and repeat step 1 (DONE)
 //3 use Dan email to check calcs for B* instead of B (including fish born + died before available for capture within a period)
-//flow???
+//4 flow???
 functions {
   // These functions are derived from Section 12.3 of
   // Stan Modeling Language User's Guide and Reference Manual
@@ -163,7 +163,7 @@ data {
   int x_mat[ss,S];//design matrix for which section an observed fish was caught in
   int<lower=0> M; // Augmented sample size
   int<lower=0> n_occasions; // Number of capture occasions
-  vector<lower=0>[n_occasions] time;//period length (assumed same for all sectons currently)
+  vector<lower=0>[n_occasions-1] time;//period length (assumed same for all sectons currently); no length for first period (before first event)
   int loc[M];//if loc == 1, fish lost on capture
   int<lower=0, upper=1> y[M, n_occasions]; // Augmented capture-history
 }
@@ -271,7 +271,7 @@ transformed parameters {
   // Additive log ratio random walk prior for entry probabilities w
   beta[1] = 0; //no need for time offset for first period
   for (t in 2 : n_occasions) {
-    beta[t] = beta[1] + sum(eps_b_t[1:(t-1)] * sigma_b_t + time[t]);
+    beta[t] = beta[1] + sum(eps_b_t[1:(t-1)] * sigma_b_t + log(time[t]));
   }
   b = softmax(beta[1:n_occasions]);
 
