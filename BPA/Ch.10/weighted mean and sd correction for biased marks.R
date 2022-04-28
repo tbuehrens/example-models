@@ -1,4 +1,5 @@
 library(tidyverse)
+library(rstan)
 library(Hmisc)
 logit<-function(x){log(x/(1-x))}
 ilogit<-function(x){exp(x)/(1+exp(x))}
@@ -74,3 +75,111 @@ quantile(pars$err_s_sd,c(0.025,0.25,0.5,0.75,0.975))
 
 plot(pars$s_mean~pars$mean)
 plot(pars$s_sd~pars$sd)
+
+
+#=================
+# simulation study
+#=================
+
+N<-10000
+x<-rnorm(N,0,1)
+a<--1
+b<--0.4
+lo<-a+b*x
+p<-ilogit(lo)
+
+plot(p~x)
+
+
+
+dat<-tibble(x,lo,p)%>%
+  mutate(
+    mark = as.integer(rbernoulli(N,p)),
+    capture = as.integer(rbernoulli(N,p)),
+    recapture = ifelse(mark==1 & capture == 1,1,0),
+    #w=(1-p)/p,
+    w = (1-ilogit(b*x))/ilogit(b*x)
+  )
+
+
+
+stan_data<-list(
+  m = sum(dat$mark),
+  c = sum(dat$capture),
+  r = sum(dat$recapture)
+)
+
+nc = 4
+ni = 1000
+nb = 500
+nt = 1
+
+inits <- lapply(1:nc, function(i)
+  list(N = runif(1, stan_data$c + stan_data$m - stan_data$r, (stan_data$c + stan_data$m - stan_data$r)*20)))
+
+
+pars=c(
+  "N"
+)
+
+js_ran <- stan("BPA/Ch.10/pooled_petersen.stan",
+                data = stan_data,
+                init = inits,
+                pars = pars,
+                chains = nc,
+                iter = ni,
+                warmup = nb,
+                thin = nt,
+                seed = 2,
+                control = list(adapt_delta = 0.8),
+                open_progress = FALSE
+                )
+
+summary(js_ran)$summary
+
+#====================
+#individual petersen
+#===================
+
+dat_aug<-dat%>%
+  filter(mark+capture>0)%>%
+  dplyr::select(mark,capture,x)%>%
+  bind_rows(tibble(mark=rep(0,ceiling(N)),capture=rep(0,ceiling(N))))
+
+stan_data2<-list(
+  M = nrow(dat_aug), # Size of augumented data set
+  T = 2, #Number of sampling occasions
+  C = dat_aug%>%filter(mark+capture>0)%>%summarise(C=n())%>%unlist(), # Size of observed data set
+  y = dat_aug%>%dplyr::select(mark,capture)%>%as.matrix(),
+  bsize = dat_aug%>%filter(mark+capture>0)%>%dplyr::select(x)%>%unlist() # fork length
+)
+
+nc = 4
+ni = 1000
+nb = 500
+nt = 1
+
+# inits <- lapply(1:nc, function(i)
+#   list(N = runif(1, stan_data$c + stan_data$m - stan_data$r, (stan_data$c + stan_data$m - stan_data$r)*20)))
+#
+#
+# pars=c(
+#   "N"
+# )
+
+js_ran2 <- stan("BPA/Ch.10/pooled_petersen_individual.stan",
+                data = stan_data2,
+                #init = inits,
+                #pars = pars,
+                cores = 4,
+                chains = nc,
+                iter = ni,
+                warmup = nb,
+                thin = nt,
+                seed = 2,
+                control = list(adapt_delta = 0.8),
+                open_progress = FALSE
+)
+
+summary(js_ran2)$summary
+
