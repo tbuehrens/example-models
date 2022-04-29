@@ -96,12 +96,12 @@ stan_data$length = rnorm(non_augment,0,1)
 
 
 
-# spatial
+# spatial (v1)
 library(gtools)
 stan_data$S<-4
-p_vec<-rdirichlet(1,alpha=rep(1,stan_data$S))
+p_vec<-rdirichlet(1,alpha=rep(5,stan_data$S))
 stan_data$x_mat<-t(rmultinom(stan_data$ss,1,p_vec))
-
+stan_data$location<-apply(stan_data$x_mat,1, function(x) which(x!=0))
 #add in variable period length
 stan_data$time = rep(1,stan_data$n_occasions-1)
 
@@ -116,7 +116,7 @@ inits <- lapply(1:nc, function(i)
        beta = c(0,rnorm(stan_data$n_occasions-1, 0, 1))))
 
 ## Call Stan from R
-js_ran2 <- stan("BPA/Ch.10/js_super_indran_thomas_test_v2_space.stan",
+js_ran2 <- stan("BPA/Ch.10/js_super_indran_thomas_space_time_length_v2.stan",
                 data = stan_data, init = inits, #pars = params,
                 chains = nc, iter = ni, warmup = nb, thin = nt,
                 seed = 2, control = list(adapt_delta = 0.8),
