@@ -146,7 +146,7 @@ functions {
     int ss = dims(location)[1];
     int s_vec[ss]; //comvert x_mat into vector with number of spatial location
     matrix[n_ind, n_occasions] p; //prob capture
-    matrix[n_ind, n_occasions] phi; //prob capture
+    matrix[n_ind, n_occasions-1] phi; //prob survival
     for (i in 1 : n_ind) {
       vector[n_occasions] qp;
       row_vector[n_occasions] chi;//prob non-recovered
@@ -154,7 +154,7 @@ functions {
       if (first[i]) {
         // Observed
         p[i,1] = inv_logit(logit(p_1) + b1_p * length_aug[i] + b2_p[location[i]]);
-        for (t in 2 : (n_occasions-1)){
+        for (t in 2 : (n_occasions)){
           p[i,t] = inv_logit(logit(p[i,t-1]) + eps_p_t[t-1] * sigma_p_t);
         }
 
@@ -396,7 +396,7 @@ model {
 generated quantities {
   int location_aug[M];//augmented design matrix for which section an observed fish was caught in
   matrix[M, n_occasions] p; //prob capture
-  matrix[M, n_occasions] phi; //prob capture
+  matrix[M, n_occasions-1] phi; //prob survival
   real<lower=0> sigma2;
   int<lower=0> Nsuper; // Superpopulation size
   int<lower=0> N[n_occasions]; // Actual population size
@@ -405,14 +405,7 @@ generated quantities {
 
   sigma2 = square(sigma);
 
-  //generate augmented x_mat, p and phi
-  for(i in 1:M){
-    if(i <= ss){
-
-    }else{
-       //to_row_vector(spatial_vec);
-    }
-  }
+  //generate augmented locations, p and phi
   for(i in 1:M){
     if(i <= ss){
       location_aug[i] = location[i];
