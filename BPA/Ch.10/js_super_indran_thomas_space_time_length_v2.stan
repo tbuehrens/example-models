@@ -115,7 +115,8 @@ functions {
                    //matrix p,
                    //matrix phi,
                    int[] location,
-                   vector length_aug,
+                   vector length,
+                   vector length_est,
                    int S,
                    vector time,
                    int[] loc,
@@ -144,7 +145,6 @@ functions {
     vector[n_occasions] qnu = 1.0 - nu;
 
     int ss = dims(location)[1];
-    int s_vec[ss]; //comvert x_mat into vector with number of spatial location
     matrix[n_ind, n_occasions] p; //prob capture
     matrix[n_ind, n_occasions-1] phi; //prob survival
     for (i in 1 : n_ind) {
@@ -153,12 +153,12 @@ functions {
 
       if (first[i]) {
         // Observed
-        p[i,1] = inv_logit(logit(p_1) + b1_p * length_aug[i] + b2_p[location[i]]);
+        p[i,1] = inv_logit(logit(p_1) + b1_p * length[i] + b2_p[location[i]] + eps[i] * sigma);
         for (t in 2 : (n_occasions)){
           p[i,t] = inv_logit(logit(p[i,t-1]) + eps_p_t[t-1] * sigma_p_t);
         }
 
-        phi[i,1] = inv_logit(logit(phi_1) + b1_phi * length_aug[i] + b2_phi[location[i]]) ^ time[1];
+        phi[i,1] = inv_logit(logit(phi_1) + b1_phi * length[i] + b2_phi[location[i]]) ^ time[1];
         for (t in 2 : (n_occasions-1)){
           phi[i,t] = inv_logit(logit(phi[i,t-1]^time[t-1]^-1) + eps_phi_t[t-1] * sigma_phi_t) ^ time[t];
         }
@@ -206,11 +206,11 @@ functions {
         vector[n_occasions + 1] lp;
         for(s in 1:S){
         // Never observed
-          p[i,1] = inv_logit(logit(p_1) + b1_p * length_aug[i] + b2_p[s]);
+          p[i,1] = inv_logit(logit(p_1) + b1_p * length_est[i-ss] + b2_p[s] + eps[i] * sigma);
           for (t in 2 : (n_occasions)){
             p[i,t] = inv_logit(logit(p[i,t-1]) + eps_p_t[t-1] * sigma_p_t);
           }
-          phi[i,1] = inv_logit(logit(phi_1) + b1_phi * length_aug[i] + b2_phi[s]) ^ time[1];
+          phi[i,1] = inv_logit(logit(phi_1) + b1_phi * length_est[i-ss] + b2_phi[s]) ^ time[1];
           for (t in 2 : (n_occasions-1)){
             phi[i,t] = inv_logit(logit(phi[i,t-1]^time[t-1]^-1) + eps_phi_t[t-1] * sigma_phi_t) ^ time[t];
           }
@@ -271,7 +271,6 @@ parameters {
   real mean_length; //mean length of all fish
   real<lower=0> sd_length; //sd length of all fish
   simplex[S] spatial_vec;//proportions of fish by location for all fish
-  //int x_mat_aug[M-ss,S]
   //survival
   real<lower=0, upper=1> phi_1; // survival first period
   vector[n_occasions-2] eps_phi_t; //temporal process errors in phi
@@ -296,7 +295,6 @@ parameters {
 }
 transformed parameters {
   //imputed covariates
-  vector[M] length_aug; //lengths of whole pop
   vector[M-ss] length_est; //lengths of uncaptured
   //capture
   vector[S] b2_p;//section-specific survival adjustment
@@ -308,10 +306,7 @@ transformed parameters {
   vector<lower=0, upper=1>[n_occasions] nu;//conditional prob entry
   //other
 
-
   length_est = mean_length + z_eps_length * sd_length;
-  length_aug[1:ss] = length;
-  length_aug[(ss+1):M] = length_est;
 
   b2_phi[1] = 0;
   b2_p[1] = 0;
@@ -366,12 +361,12 @@ model {
   eps_b_t ~ std_normal();
 
   // Likelihoods
-  //js_super_lp(y[1:ss,1:S], first[1:ss], last[1:ss], p[1:ss], phi[1:ss], psi[1:ss], nu[1:ss], chi[1:ss]);
   js_super_lp(y,
               first,
               last,
               location,
-              length_aug,
+              length,
+              length_est,
               S,
               time,
               loc,
@@ -396,7 +391,8 @@ model {
 generated quantities {
   int location_aug[M];//augmented design matrix for which section an observed fish was caught in
   matrix[M, n_occasions] p; //prob capture
-  matrix[M, n_occasions-1] phi; //prob survival
+  matrix[M, n_occasions-1] phi; //prob capture
+  vector[M] length_aug; //lengths of whole pop
   real<lower=0> sigma2;
   int<lower=0> Nsuper; // Superpopulation size
   int<lower=0> N[n_occasions]; // Actual population size
@@ -405,7 +401,19 @@ generated quantities {
 
   sigma2 = square(sigma);
 
-  //generate augmented locations, p and phi
+  //merge augemented and non-augmented lengths
+  length_aug[1:ss] = length;
+  length_aug[(ss+1):M] = length_est;
+
+
+  //generate augmented x_mat, p and phi
+  for(i in 1:M){
+    if(i <= ss){
+
+    }else{
+       //to_row_vector(spatial_vec);
+    }
+  }
   for(i in 1:M){
     if(i <= ss){
       location_aug[i] = location[i];
