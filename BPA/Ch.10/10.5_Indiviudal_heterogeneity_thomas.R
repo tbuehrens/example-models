@@ -55,7 +55,7 @@ for(i in 1:stan_data$M){
     loc[i] = 1;
   }
   for(j in 2:stan_data$n_occasions){
-    if(sum(y2[i,1:j]) == 2 & y2[i,j] == 1 & i %in% loc_indexes){
+    if(sum(y2[i,1:(j-1)]) == 2 & y2[i,j] == 1 & i %in% loc_indexes){
       y2[i,j] = 0;
       loc[i] = 1;
     }
