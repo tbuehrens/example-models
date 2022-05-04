@@ -34,10 +34,11 @@ model {
   beta ~ std_normal();
   mu_size ~ std_normal();
   sd_size ~ std_normal();
+  b2 ~ std_normal();
 
 
   for (i in 1 : C) {
-    logit_p[i,] = to_row_vector(rep_vector(logit(mean_p) + beta * bsize[i] + b2[reach[i]], C));
+    logit_p[i,] = to_row_vector(rep_vector(logit(mean_p) + beta * bsize[i] + b2[reach[i]], T));
   }
 
   // Likelihood
@@ -56,21 +57,22 @@ model {
                 + bernoulli_logit_lpmf(y[i,] | logit_p[i,]);
     } else // s[i] == 0
     {
+      vector[S] lps = log(p_S);
       for(j in 1:S){
-        logit_p[i,j] = logit(mean_p) + beta * bsize_mis[i - C] + b2[j];
-        target += log_sum_exp(log(p_S[j]) + bernoulli_lpmf(1 | omega)
+        logit_p[i,] = to_row_vector(rep_vector(logit(mean_p) + beta * bsize_mis[i - C] + b2[j],T));
+        lps[j] += log_sum_exp(bernoulli_lpmf(1 | omega)
                             // z[i] == 1
                             + bernoulli_logit_lpmf(y[i,] | logit_p[i,]),
                             bernoulli_lpmf(0 | omega) // z[i] == 0
-                            //ADD categorical likelihood
                             );
       }
+      target += log_sum_exp(lps);
     }
   }
 }
 generated quantities {
   matrix[M, T] logit_p;
-  int reach_est[M-C];
+  int<lower=0,upper=S> reach_est[M-C];
   matrix<lower=0, upper=1>[M, T] p;
   int<lower=0, upper=1> z[M];
   int<lower=C> N;
@@ -80,7 +82,7 @@ generated quantities {
   }
   for(i in (C+1):M){
     reach_est[i-C] = categorical_rng(p_S);
-    logit_p[i,] = to_row_vector(rep_vector(logit(mean_p) + beta * bsize_mis[i - C] + b2[reach_est[i]],T));
+    logit_p[i,] = to_row_vector(rep_vector(logit(mean_p) + beta * bsize_mis[i - C] + b2[reach_est[i-C]],T));
   }
 
   p = inv_logit(logit_p);

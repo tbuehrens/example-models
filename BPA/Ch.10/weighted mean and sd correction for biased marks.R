@@ -141,7 +141,7 @@ summary(js_ran)$summary
 #====================
 #individual petersen (add space)
 #===================
-N<-10000
+N<-1000
 x<-rnorm(N,0,1)
 S<-4
 x2<-rcat(N,rep(1,S)/S)
@@ -207,4 +207,7 @@ js_ran2 <- stan("BPA/Ch.10/pooled_petersen_individual_space.stan",
 )
 
 summary(js_ran2)$summary
+sum(stan_data2$y[,1]+stan_data2$y[,2])
+dim(stan_data2$y)
+p_S
 
