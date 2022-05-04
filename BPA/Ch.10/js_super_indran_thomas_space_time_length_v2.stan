@@ -203,9 +203,10 @@ functions {
         // Subsequent occasions
         1 ~ bernoulli(chi[last[i]]);
       } else {
-        vector[n_occasions + 1] lp;
+        vector[S] lps = log(spatial_vec);
         for(s in 1:S){
         // Never observed
+          vector[n_occasions + 1] lp;
           p[i,1] = inv_logit(logit(p_1) + b1_p * length_est[i-ss] + b2_p[s] + eps[i] * sigma);
           for (t in 2 : (n_occasions)){
             p[i,t] = inv_logit(logit(p[i,t-1]) + eps_p_t[t-1] * sigma_p_t);
@@ -231,8 +232,9 @@ functions {
           }
           // Never captured
           lp[n_occasions + 1] = bernoulli_lpmf(0 | psi);
-          target += log_sum_exp(log(spatial_vec[s]) + lp);
+          lps[s] += log_sum_exp(lp);
         }
+        target += log_sum_exp(lps);
       }
     }
   }
