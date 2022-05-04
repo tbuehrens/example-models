@@ -1,4 +1,5 @@
 library(tidyverse)
+library(extraDistr)
 library(rstan)
 library(Hmisc)
 logit<-function(x){log(x/(1-x))}
@@ -80,12 +81,12 @@ plot(pars$s_sd~pars$sd)
 #=================
 # simulation study
 #=================
-
 N<-10000
 x<-rnorm(N,0,1)
+S<-4
 a<--1
 b<--0.4
-lo<-a+b*x
+lo<-a + b*x
 p<-ilogit(lo)
 
 plot(p~x)
@@ -138,8 +139,30 @@ js_ran <- stan("BPA/Ch.10/pooled_petersen.stan",
 summary(js_ran)$summary
 
 #====================
-#individual petersen
+#individual petersen (add space)
 #===================
+N<-10000
+x<-rnorm(N,0,1)
+S<-4
+x2<-rcat(N,rep(1,S)/S)
+p_S<-rnorm(S,0,1)
+a<--1
+b<--0.4
+lo<-a + b*x + p_S[x2]
+p<-ilogit(lo)
+
+plot(p~x)
+
+dat<-tibble(x,lo,p)%>%
+  mutate(
+    mark = as.integer(rbernoulli(N,p)),
+    capture = as.integer(rbernoulli(N,p)),
+    recapture = ifelse(mark==1 & capture == 1,1,0),
+    #w=(1-p)/p,
+    w = (1-ilogit(b*x))/ilogit(b*x)
+    )
+
+
 
 dat_aug<-dat%>%
   filter(mark+capture>0)%>%
@@ -149,6 +172,8 @@ dat_aug<-dat%>%
 stan_data2<-list(
   M = nrow(dat_aug), # Size of augumented data set
   T = 2, #Number of sampling occasions
+  S = S,
+  reach = x2,
   C = dat_aug%>%filter(mark+capture>0)%>%summarise(C=n())%>%unlist(), # Size of observed data set
   y = dat_aug%>%dplyr::select(mark,capture)%>%as.matrix(),
   bsize = dat_aug%>%filter(mark+capture>0)%>%dplyr::select(x)%>%unlist() # fork length
@@ -167,7 +192,7 @@ nt = 1
 #   "N"
 # )
 
-js_ran2 <- stan("BPA/Ch.10/pooled_petersen_individual.stan",
+js_ran2 <- stan("BPA/Ch.10/pooled_petersen_individual_space.stan",
                 data = stan_data2,
                 #init = inits,
                 #pars = pars,
